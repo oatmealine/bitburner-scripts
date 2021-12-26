@@ -1,6 +1,6 @@
 // everythingfucker.js
 // usage: simply run it
-// takes up 6.65GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
+// takes up 6.80GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
 // you may want to mess with the constants if youre getting bad results!
 
 /** @param {NS} ns **/
@@ -152,6 +152,10 @@ export async function main(ns) {
 		return `${minutes <= 0 ? `${Math.floor(minutes)}m ` : ''}${secs.toPrecision(3)}`;
 	}
 
+	function mix(a, b, x) {
+		return a * (1 - x) + b * x;
+	}
+
 	// initialize stuff
 	await ns.write('grow.script', 'grow(args)', 'w');
 	await ns.write('hack.script', 'hack(args)', 'w');
@@ -268,7 +272,7 @@ export async function main(ns) {
 		}
 
 		let avgThreadCount = threadCounts.reduce((p, c) => p + c) / threadCounts.length;
-		processesPerTick = Math.max(processesPerTick * 0.95, totalStartedScripts);
+		processesPerTick = Math.max(mix(processesPerTick, 0, smallestTimeToWait / 1000 * 0.25), totalStartedScripts);
 
 		if (logs.length > maxLogLength) logs = logs.slice(-maxLogLength);
 
