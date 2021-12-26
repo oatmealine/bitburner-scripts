@@ -251,7 +251,7 @@ export async function main(ns) {
 				let threads = Math.min(Math.floor(availram / scriptram), maxThreads);
 				if (scriptram > availram) break;
 
-				time /= threads;
+				// time /= threads; // that's not even true
 
 				const pid = ns.exec(command, fromServer, threads, targetServer);
 				if (pid === 0) break;
