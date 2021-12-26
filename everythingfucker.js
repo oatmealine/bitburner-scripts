@@ -8,8 +8,8 @@ export async function main(ns) {
 	// constants!
 	const neverScan = ['home', 'darkweb'];
 	const updateInterval = 500;
-	const minChance = 0.6; // min chance before proceeding to grow/hack
-	const minMoney = 500000; // min money on a server before proceeding to hack
+	const minChance = 0.55; // min chance before proceeding to grow/hack
+	const minMoney = 400000; // min money on a server before proceeding to hack
 	const minMoneyPercentage = 0.5; // caps out the above number to x * maxmoney
 	const maxThreads = 32; // max threads to allocate per site to hack
 	const maxLogLength = 10;
