@@ -27,7 +27,7 @@ export async function main(ns) {
 	}
 
 	while (true) {
-		const allowance = lastMoney ? (ns.getPlayer().money - lastMoney) * 50 : ns.getPlayer().money / 4;
+		const allowance = lastMoney ? (ns.getPlayer().money - lastMoney) * 1.5 : ns.getPlayer().money / 4;
 		ns.print(`set allowance to ${Math.round(allowance).toLocaleString()}\$`);
 
 		let bestPurchasableRam = 2;
