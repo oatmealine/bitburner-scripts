@@ -14,6 +14,7 @@ export async function main(ns) {
 	const maxThreads = 32; // max threads to allocate per site to hack
 	const maxLogLength = 10;
 	const prioritizeTimeBy = 0.3; // how much to prioritize time in ordering servers [0.0 : 1.0]
+	const maxServerChars = 16;
 
 	// scanning recursion-avoiding stuff
 	let memory = [];
@@ -205,6 +206,13 @@ export async function main(ns) {
 		let ranHack = 0;
 		let threadCounts = [];
 
+		let rootedPadAmt = rooted.reduce((s1, s2) => {return Math.max(s1 || 0, s2.length || 0)});
+		let commandPadAmt = 6; // weaken is 6 chars long
+		let sortedPadAmt = sorted.reduce((s1, s2) => {return Math.max(s1 || 0, s2.length || 0)});
+
+		rootedPadAmt = Math.min(rootedPadAmt, maxServerChars);
+		sortedPadAmt = Math.min(sortedPadAmt, maxServerChars);
+
 		for (const fromServer of rooted) {
 			if (!ns.fileExists('grow.script', fromServer))
 				await ns.scp('grow.script', 'home', fromServer);
@@ -248,7 +256,13 @@ export async function main(ns) {
 				const pid = ns.exec(command, fromServer, threads, targetServer);
 				if (pid === 0) break;
 				smallestTimeToWait = Math.min(smallestTimeToWait, time);
-				logs.push(` ${fromServer} : ${command.split('.')[0]} ${targetServer}, t = ${threads} | est time ${formatTime(time)}s`);
+
+				command = command.split('.')[0];
+				let pFromServer = fromServer.padEnd(rootedPadAmt, ' ').slice(0, rootedPadAmt);
+				let pCommand = command.padEnd(commandPadAmt, ' ');
+				let pTargetServer = targetServer.padEnd(sortedPadAmt, ' ').slice(0, sortedPadAmt);
+				let pThreads = threads.toString().padEnd(maxThreads.toString().length, ' ');
+				logs.push(` ${pFromServer}: ${pCommand} ${pTargetServer} t=${pThreads} | est time ${formatTime(time)}s`);
 				scriptsRan++;
 			}
 
