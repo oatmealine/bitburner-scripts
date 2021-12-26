@@ -3,7 +3,6 @@
 // buys servers using your cash per second and upgrades them whenever possible
 // uses a random prefix from the prefixes array, avoids duplicates
 /** @param {NS} ns **/
-
 export async function main(ns) {
 	let lastMoney;
 	const prefixes = ['onionline', 'nestea', 'firepit', 'laserjet-printer', 'ummu', 'oat.zone', 'monoids-in-the-category-of-endofunctors', 'catboymaid', 'she', 'bababooey', 'gaming', 'xbox', 'razer-gaming-laptop-from-2010', 'transrights', 'unique-hostname', 'yop', 'peeesh', 'cocksauce', 'joemama', 'ghoul', 'mistress', 'oatmealbean', 'boatmealine', 'no-illegal-stuff-here-officer', 'instant-n00dles', 'sigma-grindset', 'federal-agents-outside-my-home', 'beep', 'github.com.oatmealine.bitburner-scripts', 'lol-lmao-lmfao-rofl-roflmao', 'deatj', 'anonymous-oatmeal-services', 'wife', 'chegg.com'];
@@ -14,6 +13,16 @@ export async function main(ns) {
 		for (let i = 0; i < 20; i++) {
 			let hostname = prefixes[Math.floor(Math.random() * prefixes.length)];
 			if (!ns.serverExists(hostname)) return hostname;
+		}
+	}
+
+	function tryBuyServer(ram) {
+		let randHostname = getRandomHostname();
+		let hostname = ns.purchaseServer(randHostname, ram);
+		if (!hostname) {
+			ns.print(`failed to purchase ${randHostname} (${ram}GB server)?!?!?!?!`);
+		} else {
+			ns.print(`purchased ${hostname} (${ram}GB server)`);
 		}
 	}
 
@@ -30,6 +39,7 @@ export async function main(ns) {
 			bestPurchasableRam++;
 		}
 		bestPurchasableRam--;
+		let bestPurchasableRamSane = Math.pow(2, bestPurchasableRam);
 
 		if (ns.getPurchasedServers().length >= ns.getPurchasedServerLimit()) {
 			let servers = ns.getPurchasedServers();
@@ -43,18 +53,16 @@ export async function main(ns) {
 				}
 			}
 
-			if (worstServerRam < Math.pow(2, bestPurchasableRam)) {
+			if (worstServerRam < bestPurchasableRamSane) {
 				ns.killall(worstServer);
 				ns.deleteServer(worstServer);
 				ns.print(`deleted ${worstServer} for being bad (only ${worstServerRam}GB?????)`);
-				let hostname = ns.purchaseServer(getRandomHostname(), Math.pow(2, bestPurchasableRam));
-				ns.print(`purchased ${hostname} (${Math.pow(2, bestPurchasableRam)}GB server)`);
+				tryBuyServer(bestPurchasableRamSane);
 			} else {
-				ns.print(`best server i can buy with allowance is ${Math.pow(2, bestPurchasableRam)}GB, yet my worst server is ${worstServerRam}GB`);
+				ns.print(`best server i can buy with allowance is ${bestPurchasableRamSane}GB, yet my worst server is ${worstServerRam}GB`);
 			}
 		} else {
-			let hostname = ns.purchaseServer(getRandomHostname(), Math.pow(2, bestPurchasableRam));
-			ns.print(`purchased ${hostname} (${Math.pow(2, bestPurchasableRam)}GB server)`);
+			tryBuyServer(bestPurchasableRamSane);
 		}
 
 		lastMoney = ns.getPlayer().money;
