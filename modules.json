@@ -5,6 +5,22 @@
 		"loadLoop": true,
 		"loadInitialize": true,
 		"variablePrefix": "everything",
-		"ram": 1.9
+		"ram": 5.2
+	},
+	{
+		"name": "serverfucker",
+		"prefix": "S",
+		"loadLoop": true,
+		"loadInitialize": false,
+		"variablePrefix": "server",
+		"ram": 8.25
+	},
+	{
+		"name": "hacknetfucker",
+		"prefix": "H",
+		"loadLoop": true,
+		"loadInitialize": false,
+		"variablePrefix": "hacknet",
+		"ram": 4.5
 	}
 ]

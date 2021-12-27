@@ -3,37 +3,8 @@
 // youre still able to run the individual files! its just not as efficient
 // uses up 18.50GB with everything enabled
 
-import {
-	loop as everythingLoop,
-	initialize as everythingInit,
-} from './everythingfucker.js';
-
-import {
-	loop as serverLoop
-} from './serverfucker.js';
-
-import {
-	loop as hacknetLoop
-} from './hacknetfucker.js';
-
-const fuckers = [
-	{
-		prefix: 'E',
-		name: 'everythingfucker',
-		loop: everythingLoop,
-		init: everythingInit,
-	},
-	{
-		prefix: 'S',
-		name: 'serverfucker',
-		loop: serverLoop
-	},
-	{
-		prefix: 'H',
-		name: 'hacknetfucker',
-		loop: hacknetLoop
-	}
-]
+// if it gives you an error here, use fuckerfetcher.js
+import { fuckers } from './_config.js';
 
 let logs = [];
 const maxLogLength = 10;
@@ -42,11 +13,18 @@ const maxLogLength = 10;
 export async function main(ns) {
 	ns.disableLog('ALL');
 
+	if (fuckers.length === 0) {
+		ns.tprint('no modules loaded!');
+		return;
+	}
+
 	for (const fucker of fuckers) {
 		if (fucker.init) await fucker.init(ns);
 	}
 
 	let t = 0;
+
+	ns.tail();
 
 	while (true) {
 		let stats = [];
