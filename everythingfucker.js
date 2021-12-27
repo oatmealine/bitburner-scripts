@@ -18,6 +18,7 @@ const maxServerChars = 16;
 // scanning recursion-avoiding stuff
 let memory = [];
 let oldexes = [];
+let requiredLevels = new Set();
 let oldlevel = 0;
 let ignore = [];
 
@@ -76,10 +77,16 @@ function getExes(ns) {
 function nukeAllNukable(ns, exes) {
 	while (true) {
 		let accessible = doScan(ns)[1];
-		let bruteforcable = accessible
-			.filter(s => ns.getServerNumPortsRequired(s) <= exes.length)
+		let couldHaveLevel = accessible
+			.filter(s => !ignore.includes(s))
+			.filter(s => ns.getServerNumPortsRequired(s) <= exes.length);
+
+		let bruteforcable = couldHaveLevel
 			.filter(s => ns.getServerRequiredHackingLevel(s) <= ns.getPlayer().hacking)
-			.filter(s => !ignore.includes(s));
+
+		for (const s of couldHaveLevel.filter(s => ns.getServerRequiredHackingLevel(s) > ns.getPlayer().hacking)) {
+			requiredLevels.add(ns.getServerRequiredHackingLevel(s));
+		}
 
 		if (bruteforcable.length === 0) {
 			ns.tprint(`no hackable servers found (out of ${accessible.length} accessible), continuing`);
@@ -171,15 +178,16 @@ export async function loop(ns) {
 
 	// hackfucker.js portion
 	let exes = getExes(ns);
-	if (oldexes.length !== exes.length || oldlevel < ns.getPlayer().hacking) {
+	let playerLevel = ns.getPlayer().hacking;
+	if (oldexes.length !== exes.length || (oldlevel < playerLevel && requiredLevels.has(playerLevel))) {
 		if (oldexes.length > 0 && oldexes.length !== exes.length) ns.tprint('owo???????? new exe detected lets go');
-		if (oldlevel !== 0 && oldlevel < ns.getPlayer().hacking) ns.tprint('player has levelled up lets go');
+		if (oldlevel !== 0 && oldlevel < playerLevel) ns.tprint('player has levelled up lets go');
 		log.push('running hack check');
 		ignore = [];
 		nukeAllNukable(ns, exes);
 	}
 	oldexes = exes;
-	oldlevel = ns.getPlayer().hacking;
+	oldlevel = playerLevel;
 
 	// crawlfucker.js portion
 	let res = doScan(ns);
@@ -314,3 +322,4 @@ everythingfucker.js | (ↄ) Jill "oatmealine" Monoids 2021`);
 		await ns.sleep(time + 100); // to prevent weird timing jank
 	}
 }
+
