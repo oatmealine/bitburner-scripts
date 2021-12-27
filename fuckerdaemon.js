@@ -4,7 +4,7 @@
 // uses up 18.50GB with everything enabled
 
 // if it gives you an error here, use fuckerfetcher.js
-import { fuckers } from './_config.js';
+import { fuckers } from './config.js';
 
 let logs = [];
 const maxLogLength = 10;

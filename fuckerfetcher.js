@@ -2,7 +2,7 @@ const ghPrefix = 'https://raw.githubusercontent.com/oatmealine/bitburner-scripts
 
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.tprint('fuckerfetcher.js v1.0 by Jill "oatmealine" Monoids');
+	ns.tprint('fuckerfetcher.js v1.01 by Jill "oatmealine" Monoids');
 
 	ns.tprint('fetching modules.json, please wait...');
 	let modules;
@@ -56,7 +56,7 @@ ${downloaded.map(module => {
 	if (module.loadLoop) hooks.push(['loop', module.variablePrefix + 'Loop']);
 	if (module.loadInitialize) hooks.push(['initialize', module.variablePrefix + 'Init']);
 	return `import { ${hooks.map(h => h[0] + ' as ' + h[1]).join(', ')} } from './${module.name}.js'`;
-})}
+}).join('\n\n')}
 
 export const fuckers = ${JSON.stringify(downloaded.map(module => {
 	let obj = {name: module.name, prefix: module.prefix};
@@ -65,6 +65,9 @@ export const fuckers = ${JSON.stringify(downloaded.map(module => {
 	return obj;
 })).replaceAll('"$','').replaceAll('$"','')}`;
 
-	await ns.write('_config.js', configData, 'w');
+	await ns.write('config.js', configData, 'w');
+
+	ns.tprint('downloading fuckerdaemon.js...');
+	await ns.wget(ghPrefix + 'fuckerdaemon.js', 'fuckerdaemon.js');
 	ns.tprint('done! you can now run fuckerdaemon.js with "run fuckerdaemon.js"');
 }
