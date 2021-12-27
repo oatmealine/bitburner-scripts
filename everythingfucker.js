@@ -1,7 +1,7 @@
 // everythingfucker.js
 // usage: simply run it
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
-// takes up 6.10GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
+// takes up 8.35GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
 // you may want to mess with the constants if youre getting bad results!
 
 // constants!
@@ -343,6 +343,10 @@ export async function loop(ns) {
 	securityLevelCache = {};
 	growthCache = {};
 	playerCache = undefined;
+
+	for (const s of ns.getPurchasedServers()) {
+		if (maxRamCache[s]) delete maxRamCache[s];
+	}
 
 	let smallestTimeToWait = updateInterval;
 
