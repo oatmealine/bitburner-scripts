@@ -2,7 +2,7 @@ const ghPrefix = 'https://raw.githubusercontent.com/oatmealine/bitburner-scripts
 
 /** @param {NS} ns **/
 export async function main(ns) {
-	ns.tprint('fuckerfetcher.js v1.01 by Jill "oatmealine" Monoids');
+	ns.tprint('fuckerfetcher.js v1.02 by Jill "oatmealine" Monoids');
 
 	ns.tprint('fetching modules.json, please wait...');
 	let modules;
@@ -16,7 +16,7 @@ export async function main(ns) {
 	ns.rm('_modules.txt');
 
 	let firstModule = true;
-	let totalram = 0;
+	let totalram = 1.60;
 	let downloaded = [];
 	for (const module of modules) {
 		let str = `do you want to download ${module.name}? this module will use up ${module.ram.toLocaleString()}GB of ram.`;
