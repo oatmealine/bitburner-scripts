@@ -1,0 +1,10 @@
+[
+	{
+		name: "everythingfucker",
+		prefix: "E",
+		loadLoop: true,
+		loadInitialize: true,
+		variablePrefix: "everything",
+		ram: 1.9
+	}
+]
