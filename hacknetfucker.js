@@ -84,9 +84,9 @@ export function loop(ns) {
 	}
 
 	if (maxUpgrade !== 0 && maxUpgradeAmt !== 0) {
-		log.push(`best upgrade with an allowance of ${allowance.toLocaleString()}\$ is ${maxUpgradeAmt} ${maxUpgradeType} upgrades for hacknet-node-${maxUpgradeIndex}`);
+		log.push(`best upgrade with ${allowance.toLocaleString()}\$ is ${maxUpgradeAmt} ${maxUpgradeType} upgrades for hacknet-node-${maxUpgradeIndex}`);
 
-		let currentMoney = ns.getPlayer().money;
+		//let currentMoney = ns.getPlayer().money;
 		switch (maxUpgradeType) {
 			case 'ram':
 				hacknet.upgradeRam(maxUpgradeIndex, maxUpgradeAmt);
@@ -98,9 +98,9 @@ export function loop(ns) {
 				hacknet.upgradeLevel(maxUpgradeIndex, maxUpgradeAmt);
 				break;
 		}
-		log.push(`spent ${Math.floor(currentMoney - ns.getPlayer().money).toLocaleString()}\$`);
+		//log.push(`spent ${Math.floor(currentMoney - ns.getPlayer().money).toLocaleString()}\$`);
 	} else {
-		log.push(`no upgrades available with an allowance of ${allowance.toLocaleString()}\$`);
+		log.push(`no upgrades available with ${allowance.toLocaleString()}\$`);
 	}
 
 	return [log, [`${nodes} hacknet nodes, avg: ${(levels / nodes).toFixed(2)} lvl ${(ram / nodes).toFixed(2)} GB ${(core / nodes).toFixed(2)} cores`], refreshTimer];
