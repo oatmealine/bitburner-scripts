@@ -7,7 +7,7 @@
 export async function main(ns) {
 	// constants!
 	const neverScan = ['home', 'darkweb'];
-	const updateInterval = 500;
+	const updateInterval = 250;
 	const minChance = 0.55; // min chance before proceeding to grow/hack
 	const minMoney = 400000; // min money on a server before proceeding to hack
 	const minMoneyPercentage = 0.5; // caps out the above number to x * maxmoney
