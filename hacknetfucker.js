@@ -1,5 +1,6 @@
 // hacknetfucker.js
 // usage: simply run it
+// uses 6.10GB of ram
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
 // upgrades available hacknet nodes (only available ones!) to produce the ideal cash per second only using your nodes' production
 // doesnt work with the servers! whatever those are ... however i might make a seperate script that does whenever i get to that
@@ -60,7 +61,7 @@ export function loop(ns) {
 		}
 		upgrades.push([(stats.production * ((stats.level + 1) / stats.level - 1)) * (upgradeamt - 1), 'level', upgradeamt - 1]);
 
-		let best = upgrades.reduce((p, c) => p[0] > c[0] ? p : c);
+		let best = upgrades.reduce((p, c) => p[0] > c[0] ? p : c, [0]);
 		if (best[0] > maxUpgrade) {
 			maxUpgrade = best[0];
 			maxUpgradeIndex = i;

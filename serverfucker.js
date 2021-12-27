@@ -1,6 +1,7 @@
 // serverfucker.js
 // usage: simply run it
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
+// uses up 9.85GB of ram
 // buys servers using your cash per second and upgrades them whenever possible
 // uses a random prefix from the prefixes array, avoids duplicates
 
@@ -30,7 +31,7 @@ function tryBuyServer(ns, ram) {
 export function loop(ns) {
 	let log = [];
 
-	const allowance = lastMoney ? (ns.getPlayer().money - lastMoney) * 1.5 : ns.getPlayer().money / 4;
+	const allowance = lastMoney ? Math.max(ns.getPlayer().money - lastMoney, 0) * 1.5 : ns.getPlayer().money / 4;
 	log.push(`set allowance to ${Math.round(allowance).toLocaleString()}\$`);
 
 	let bestPurchasableRam = 2;
@@ -44,7 +45,9 @@ export function loop(ns) {
 	bestPurchasableRam--;
 	let bestPurchasableRamSane = Math.pow(2, bestPurchasableRam);
 
-	if (ns.getPurchasedServers().length >= ns.getPurchasedServerLimit()) {
+	if (ns.getPurchasedServerCost(bestPurchasableRamSane) > allowance) {
+		log.push(`can\'t buy any server with an allowance of ${allowance.toLocaleString()}\$`);
+	} else if (ns.getPurchasedServers().length >= ns.getPurchasedServerLimit()) {
 		let servers = ns.getPurchasedServers();
 		let worstServer;
 		let worstServerRam = Number.MAX_SAFE_INTEGER;
