@@ -11,6 +11,15 @@ const allowanceAmt = 0.2;
 const maxLogLength = 10;
 let logs = [];
 
+function moneyGainRate(level, ram, cores, mult) {
+  const gainPerLevel = 1.5;
+
+  const levelMult = level * gainPerLevel;
+  const ramMult = Math.pow(1.035, ram - 1);
+  const coresMult = (cores + 5) / 6;
+  return levelMult * ramMult * coresMult * mult;
+}
+
 /** @param {NS} ns **/
 export function loop(ns) {
 	const hacknet = ns.hacknet;
@@ -23,6 +32,7 @@ export function loop(ns) {
 	let levels = 0;
 
 	let allowance = ns.getPlayer().money * allowanceAmt;
+	let mult = ns.getPlayer().hacknet_node_money_mult
 
 	let moneyrate = 0;
 	for (let i = 0; i < nodes; i++) {
@@ -44,22 +54,25 @@ export function loop(ns) {
 		let upgrades = [];
 
 		let upgradeamt = 0;
-		while (hacknet.getRamUpgradeCost(i, upgradeamt) < allowance) {
+		while (hacknet.getRamUpgradeCost(i, upgradeamt) < allowance && (stats.ram + upgradeamt) <= 64) {
 			upgradeamt++;
 		}
-		upgrades.push([stats.production * 0.07 * (upgradeamt - 1), 'ram', upgradeamt - 1]);
+		upgradeamt--;
+		upgrades.push([moneyGainRate(stats.level, stats.ram, stats.cores, mult + upgradeamt), 'ram', upgradeamt]);
 
 		upgradeamt = 0;
-		while (hacknet.getCoreUpgradeCost(i, upgradeamt) < allowance) {
+		while (hacknet.getCoreUpgradeCost(i, upgradeamt) < allowance && (stats.cores + upgradeamt) <= 16) {
 			upgradeamt++;
 		}
-		upgrades.push([stats.production * ((stats.cores + 5) / (stats.cores + 4) - 1) * (upgradeamt - 1), 'core', upgradeamt - 1]);
+		upgradeamt--;
+		upgrades.push([moneyGainRate(stats.level, stats.ram, stats.cores + upgradeamt, mult), 'core', upgradeamt]);
 
 		upgradeamt = 0;
-		while (hacknet.getLevelUpgradeCost(i, upgradeamt) < allowance) {
+		while (hacknet.getLevelUpgradeCost(i, upgradeamt) < allowance && (stats.level + upgradeamt) <= 200) {
 			upgradeamt++;
 		}
-		upgrades.push([(stats.production * ((stats.level + 1) / stats.level - 1)) * (upgradeamt - 1), 'level', upgradeamt - 1]);
+		upgradeamt--;
+		upgrades.push([moneyGainRate(stats.level + upgradeamt, stats.ram, stats.cores, mult), 'level', upgradeamt]);
 
 		let best = upgrades.reduce((p, c) => p[0] > c[0] ? p : c, [0]);
 		if (best[0] > maxUpgrade) {
@@ -70,7 +83,7 @@ export function loop(ns) {
 		}
 	}
 
-	if (maxUpgrade !== 0) {
+	if (maxUpgrade !== 0 && maxUpgradeAmt !== 0) {
 		log.push(`best upgrade with an allowance of ${allowance.toLocaleString()}\$ is ${maxUpgradeAmt} ${maxUpgradeType} upgrades for hacknet-node-${maxUpgradeIndex}`);
 
 		let currentMoney = ns.getPlayer().money;
