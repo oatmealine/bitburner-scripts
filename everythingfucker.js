@@ -284,7 +284,7 @@ export async function loop(ns) {
 	stats.push(`${totalRunningScripts} processes running on ${rooted.length} servers hacking ${sorted.length} servers out of ${res[0].length + res[1].length} known`);
 	stats.push(`${totalStartedScripts} processes (${Math.floor(totalStartedScripts / totalRunningScripts * 1000) / 10}%) started this tick`);
 	stats.push(`${ranHack} hacking, ${ranWeaken} weakening, ${ranGrow} growing`);
-	stats.push(`${Math.floor(avgThreadCount * 10) / 10} threads avg, ${Math.floor(totalRunningScripts / sorted.length * 10) / 10} processes per server avg, ${Math.floor(processesPerTick / (smallestTimeToWait / 1000) * 100) / 100} processes/s`);
+	stats.push(`${Math.floor(avgThreadCount * 10) / 10} threads avg, ${Math.floor(totalRunningScripts / sorted.length * 10) / 10} processes/server, ${Math.floor(processesPerTick / (smallestTimeToWait / 1000) * 100) / 100} processes/s`);
 
 	return [log, stats, smallestTimeToWait];
 }
