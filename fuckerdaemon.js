@@ -1,6 +1,7 @@
 // fuckerdaemon.js
 // acts as an auto-launcher for everythingfucker, serverfucker, hacknetfucker to reduce ram usage
 // youre still able to run the individual files! its just not as efficient
+// uses up 18.50GB with everything enabled
 
 import {
 	loop as everythingLoop,
@@ -74,7 +75,7 @@ export async function main(ns) {
 ${stats.join('\n')}
 fuckerdaemon | (ↄ) Jill "oatmealine" Monoids 2021`);
 
-		const sleepTime = times.reduce((a, b) => Math.min(a, b)) || 0;
+		const sleepTime = times.reduce((a, b) => Math.min(a, b), 10000) || 0;
 		await ns.sleep(sleepTime + 100); // to prevent weird timing jank
 		t += sleepTime;
 	}
