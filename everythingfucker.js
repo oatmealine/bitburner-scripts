@@ -1,15 +1,13 @@
 // everythingfucker.js
 // usage: simply run it
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
-// takes up 6.80GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
+// takes up 5.90GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
 // you may want to mess with the constants if youre getting bad results!
 
 // constants!
 const neverScan = ['home'];
 const updateInterval = 250;
 const minChance = 0.55; // min chance before proceeding to grow/hack
-const minMoney = 400000; // min money on a server before proceeding to hack
-const minMoneyPercentage = 0.5; // caps out the above number to x * maxmoney
 const maxThreads = 1024; // max threads to allocate per server to hack
 const maxLogLength = 10;
 const prioritizeTimeBy = 0.04; // how much to prioritize time in ordering servers [0.0 : 1.0]
@@ -28,12 +26,13 @@ let scanCache = {};
 let moneyMaxCache = {};
 let scriptMemoryCache = {};
 let maxRamCache = {};
+let requiredHackingLevel = {};
 // temporary caches ( reset on tick start )
 let moneyAvailableCache = {};
 let hackChanceCache = {};
 let hackTimeCache = {};
-let weakenTimeCache = {};
-let growTimeCache = {};
+let securityLevelCache = {};
+let playerCache;
 
 // misc
 let processesPerTick = 0;
@@ -82,10 +81,10 @@ function nukeAllNukable(ns, exes) {
 			.filter(s => ns.getServerNumPortsRequired(s) <= exes.length);
 
 		let bruteforcable = couldHaveLevel
-			.filter(s => ns.getServerRequiredHackingLevel(s) <= ns.getPlayer().hacking)
+			.filter(s => getRequiredHackingLevel(ns, s) <= ns.getPlayer().hacking)
 
-		for (const s of couldHaveLevel.filter(s => ns.getServerRequiredHackingLevel(s) > ns.getPlayer().hacking)) {
-			requiredLevels.add(ns.getServerRequiredHackingLevel(s));
+		for (const s of couldHaveLevel.filter(s => getRequiredHackingLevel(ns, s) > ns.getPlayer().hacking)) {
+			requiredLevels.add(getRequiredHackingLevel(ns, s));
 		}
 
 		if (bruteforcable.length === 0) {
@@ -119,7 +118,76 @@ function nukeAllNukable(ns, exes) {
 	}
 }
 
+// formulas.js moment
+
+function calculateIntelligenceBonus(intelligence, weight = 1) {
+  return 1 + (weight * Math.pow(intelligence, 0.8)) / 600;
+}
+
+/** @param {NS} ns **/
+function hackTime(ns, hostname) {
+  const difficultyMult = getRequiredHackingLevel(ns, hostname) * getSecurityLevel(ns, hostname);
+  const player = getPlayer(ns);
+
+  const baseDiff = 500;
+  const baseSkill = 50;
+  const diffFactor = 2.5;
+  let skillFactor = diffFactor * difficultyMult + baseDiff;
+  skillFactor /= player.hacking + baseSkill;
+
+  const hackTimeMultiplier = 5;
+  const hackingTime =
+    (hackTimeMultiplier * skillFactor) /
+    (player.hacking_speed_mult * calculateIntelligenceBonus(player.intelligence, 1));
+
+  return hackingTime * 1000;
+}
+function hackChance(ns, hostname) {
+  const player = getPlayer(ns);
+
+  const hackFactor = 1.75;
+  const difficultyMult = (100 - getSecurityLevel(ns, hostname)) / 100;
+  const skillMult = hackFactor * player.hacking;
+  const skillChance = (skillMult - getRequiredHackingLevel(ns, hostname)) / skillMult;
+  const chance =
+    skillChance * difficultyMult * player.hacking_chance_mult * calculateIntelligenceBonus(player.intelligence, 1);
+  if (chance > 1) {
+    return 1;
+  }
+  if (chance < 0) {
+    return 0;
+  }
+
+  return chance;
+}
+function hackPercent(ns, hostname) {
+  const player = getPlayer(ns);
+
+  const balanceFactor = 240;
+
+  const difficultyMult = (100 - getSecurityLevel(ns, hostname)) / 100;
+  const skillMult = (player.hacking - (getRequiredHackingLevel(ns, hostname) - 1)) / player.hacking;
+  const percentMoneyHacked = (difficultyMult * skillMult * player.hacking_money_mult) / balanceFactor;
+  if (percentMoneyHacked < 0) {
+    return 0;
+  }
+  if (percentMoneyHacked > 1) {
+    return 1;
+  }
+
+  return percentMoneyHacked;
+}
+
 // cached function variants to avoid || () = type nonsense
+function getPlayer(ns) {
+	return playerCache || (playerCache = ns.getPlayer());
+}
+function getSecurityLevel(ns, hostname) {
+	return securityLevelCache[hostname] || (securityLevelCache[hostname] = ns.getServerSecurityLevel(hostname));
+}
+function getRequiredHackingLevel(ns, hostname) {
+	return requiredHackingLevel[hostname] || (requiredHackingLevel[hostname] = ns.getServerRequiredHackingLevel(hostname));
+}
 function getMoneyAvailable(ns, hostname) {
 	return moneyAvailableCache[hostname] || (moneyAvailableCache[hostname] = ns.getServerMoneyAvailable(hostname));
 }
@@ -127,7 +195,7 @@ function getMaxMoneyAvailable(ns, hostname) {
 	return moneyMaxCache[hostname] || (moneyMaxCache[hostname] = ns.getServerMaxMoney(hostname));
 }
 function getHackChance(ns, hostname) {
-	return hackChanceCache[hostname] || (hackChanceCache[hostname] = ns.hackAnalyzeChance(hostname));
+	return hackChanceCache[hostname] || (hackChanceCache[hostname] = hackChance(ns, hostname));
 }
 function getScriptRam(ns, script) {
 	return scriptMemoryCache[script] || (scriptMemoryCache[script] = ns.getScriptRam(script));
@@ -136,13 +204,13 @@ function getMaxRam(ns, hostname) {
 	return maxRamCache[hostname] || (maxRamCache[hostname] = ns.getServerMaxRam(hostname));
 }
 function getHackTime(ns, hostname) {
-	return hackTimeCache[hostname] || (hackTimeCache[hostname] = ns.getHackTime(hostname));
+	return hackTimeCache[hostname] || (hackTimeCache[hostname] = hackTime(ns, hostname));
 }
 function getWeakenTime(ns, hostname) {
-	return weakenTimeCache[hostname] || (weakenTimeCache[hostname] = ns.getWeakenTime(hostname));
+	return getHackTime(ns, hostname) * 4;
 }
 function getGrowTime(ns, hostname) {
-	return growTimeCache[hostname] || (growTimeCache[hostname] = ns.getGrowTime(hostname));
+	return getHackTime(ns, hostname) * 3.2;
 }
 
 function getAvgTime(ns, hostname) {
@@ -171,14 +239,14 @@ export async function loop(ns) {
 	moneyAvailableCache = {};
 	hackChanceCache = {};
 	hackTimeCache = {};
-	weakenTimeCache = {};
-	growTimeCache = {};
+	securityLevelCache = {};
+	playerCache = undefined;
 
 	let smallestTimeToWait = updateInterval;
 
 	// hackfucker.js portion
 	let exes = getExes(ns);
-	let playerLevel = ns.getPlayer().hacking;
+	let playerLevel = getPlayer(ns).hacking;
 	if (oldexes.length !== exes.length || (oldlevel < playerLevel && requiredLevels.has(playerLevel))) {
 		if (oldexes.length > 0 && oldexes.length !== exes.length) ns.tprint('owo???????? new exe detected lets go');
 		if (oldlevel !== 0 && oldlevel < playerLevel) ns.tprint('player has levelled up lets go');
@@ -230,7 +298,7 @@ export async function loop(ns) {
 			if (!targetServer) break;
 
 			const hackChance = getHackChance(ns, targetServer);
-			const minMoneyAmt = Math.min(minMoney, minMoneyPercentage * getMaxMoneyAvailable(ns, targetServer));
+			const minMoneyAmt = hackPercent(ns, targetServer) * getMaxMoneyAvailable(ns, targetServer);
 
 			let command;
 			let time;
