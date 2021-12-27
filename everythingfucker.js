@@ -5,12 +5,12 @@
 // you may want to mess with the constants if youre getting bad results!
 
 // constants!
-const neverScan = ['home', 'darkweb'];
+const neverScan = ['home'];
 const updateInterval = 250;
 const minChance = 0.55; // min chance before proceeding to grow/hack
 const minMoney = 400000; // min money on a server before proceeding to hack
 const minMoneyPercentage = 0.5; // caps out the above number to x * maxmoney
-const maxThreads = 32; // max threads to allocate per site to hack
+const maxThreads = 1024; // max threads to allocate per server to hack
 const maxLogLength = 10;
 const prioritizeTimeBy = 0.3; // how much to prioritize time in ordering servers [0.0 : 1.0]
 const maxServerChars = 16;
