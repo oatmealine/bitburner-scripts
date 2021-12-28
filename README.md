@@ -24,4 +24,4 @@ export const urlPrefix = 'https://example.com/bitburner'; // '/servers' will be 
 export const secret = 'secret phrase'; // sync this with the server backend
 ```
 
-backend config is documented at [the backend gh page](https://github.com/oatmaline/bitburner-grafana)
+backend config is documented at [the backend gh page](https://github.com/oatmealine/bitburner-grafana)
