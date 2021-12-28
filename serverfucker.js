@@ -18,18 +18,25 @@ function getRandomHostname(ns) {
 	}
 }
 
-function tryBuyServer(ns, ram) {
+let grafanaSubmit = {};
+
+async function tryBuyServer(ns, ram) {
 	let randHostname = getRandomHostname(ns);
 	let hostname = ns.purchaseServer(randHostname, ram);
 	if (!hostname) {
 		return `! failed to purchase ${randHostname} (${ram}GB server)?!?!?!?!`;
 	} else {
+		grafanaSubmit['/boughtserver'] = {
+			hostname: hostname,
+			ram: ram
+		};
 		return `+ purchased ${hostname} (${ram}GB server)`;
 	}
 }
 
-export function loop(ns) {
+export async function loop(ns) {
 	let log = [];
+	grafanaSubmit = {};
 
 	const allowance = lastMoney ? Math.max(ns.getPlayer().money - lastMoney, 0) * 1.5 : ns.getPlayer().money / 4;
 	log.push(`set allowance to ${Math.round(allowance).toLocaleString()}\$`);
@@ -62,18 +69,21 @@ export function loop(ns) {
 		if (worstServerRam < bestPurchasableRamSane) {
 			ns.killall(worstServer);
 			ns.deleteServer(worstServer);
+			grafanaSubmit['/rmserver'] = {
+				hostname: worstServer
+			};
 			log.push(`deleted ${worstServer} for being bad (only ${worstServerRam}GB?????)`);
-			log.push(tryBuyServer(ns, bestPurchasableRamSane));
+			log.push(await tryBuyServer(ns, bestPurchasableRamSane));
 		} else {
 			log.push(`cant buy better server with an allowance of ${allowance.toLocaleString()}\$`);
 		}
 	} else {
-		log.push(tryBuyServer(ns, bestPurchasableRamSane));
+		log.push(await tryBuyServer(ns, bestPurchasableRamSane));
 	}
 
 	lastMoney = ns.getPlayer().money;
 
-	return [log, [], 50000];
+	return [log, [], 50000, grafanaSubmit];
 }
 
 /** @param {NS} ns **/

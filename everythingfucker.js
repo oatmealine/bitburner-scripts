@@ -21,7 +21,7 @@ let oldlevel = 0;
 let ignore = [];
 
 // caches
-// global caches ( never reset )
+// global caches ( never reset )	
 let scanCache = {};
 let moneyMaxCache = {};
 let scriptMemoryCache = {};
@@ -344,7 +344,9 @@ export async function loop(ns) {
 	growthCache = {};
 	playerCache = undefined;
 
-	for (const s of ns.getPurchasedServers()) {
+	const purchasedServers = ns.getPurchasedServers();
+
+	for (const s of purchasedServers) {
 		if (maxRamCache[s]) delete maxRamCache[s];
 	}
 
@@ -517,7 +519,20 @@ export async function loop(ns) {
 	stats.push(`${ranHack} hacking, ${ranWeaken} weakening, ${ranGrow} growing; ${securityLevelScheduled.length} + ${moneyAvailableScheduled.length} changes scheduled`);
 	stats.push(`${Math.floor(avgThreadCount * 10) / 10} threads avg, ${Math.floor(totalRunningScripts / sorted.length * 10) / 10} processes/server, ${Math.floor(processesPerTick / (smallestTimeToWait / 1000) * 100) / 100} processes/s`);
 
-	return [log, stats, smallestTimeToWait];
+	return [log, stats, smallestTimeToWait, {
+		'/': {
+			processes: totalRunningScripts,
+			hacking: ranHack,
+			weakening: ranWeaken,
+			growing: ranGrow
+		},
+		'/servers': {
+			known: res[1].length,
+			rooted: res[0].length - purchasedServers.length - sorted.length,
+			owned: purchasedServers.length,
+			profitable: sorted.length
+		}
+	}];
 }
 
 export async function initialize(ns) {
