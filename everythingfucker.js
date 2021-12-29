@@ -1,14 +1,14 @@
 // everythingfucker.js
 // usage: simply run it
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
-// takes up 8.35GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
+// takes up 6.35GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
 // you may want to mess with the constants if youre getting bad results!
 
 // constants!
 const neverScan = ['home'];
 const updateInterval = 250;
 const minChance = 0.55; // min chance before proceeding to grow/hack
-const maxThreads = 1024; // max threads to allocate per server to hack
+const maxThreads = 8192; // max threads to allocate per server to hack
 const maxLogLength = 10;
 const prioritizeTimeBy = 0.04; // how much to prioritize time in ordering servers [0.0 : 1.0]
 const maxServerChars = 16;
@@ -21,7 +21,7 @@ let oldlevel = 0;
 let ignore = [];
 
 // caches
-// global caches ( never reset )	
+// global caches ( never reset )
 let scanCache = {};
 let moneyMaxCache = {};
 let scriptMemoryCache = {};
@@ -272,7 +272,7 @@ function getSecurityLevel(ns, hostname) {
 		oldLevel[hostname] = level;
 		securityLevelScheduled = securityLevelScheduled.filter(l => l[0] !== hostname);
 	}
-	return level + (securityLevelScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0);
+	return level + Math.max(securityLevelScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0, getMinSecurityLevel(ns, hostname));
 }
 function getRequiredHackingLevel(ns, hostname) {
 	return requiredHackingLevel[hostname] || (requiredHackingLevel[hostname] = ns.getServerRequiredHackingLevel(hostname));
@@ -285,7 +285,7 @@ function getMoneyAvailable(ns, hostname) {
 		oldMoney[hostname] = money;
 		moneyAvailableScheduled = moneyAvailableScheduled.filter(l => l[0] !== hostname);
 	}
-	return money + (moneyAvailableScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0);
+	return money + Math.min(Math.max(moneyAvailableScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0, 0), getMaxMoneyAvailable(ns, hostname));
 }
 function getMaxMoneyAvailable(ns, hostname) {
 	return moneyMaxCache[hostname] || (moneyMaxCache[hostname] = ns.getServerMaxMoney(hostname));
@@ -531,6 +531,9 @@ export async function loop(ns) {
 			rooted: res[0].length - purchasedServers.length - sorted.length,
 			owned: purchasedServers.length,
 			profitable: sorted.length
+		},
+		'/money': {
+			money: getPlayer(ns).money
 		}
 	}];
 }
