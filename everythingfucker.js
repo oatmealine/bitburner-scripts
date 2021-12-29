@@ -1,14 +1,13 @@
 // everythingfucker.js
 // usage: simply run it
 // its recommended to use fuckerdaemon.js, but it also runs standalone at a bigger amount of ram
-// takes up 6.35GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
+// takes up 8.35GB of ram, automatically hacks any servers that are hackable, tries to avoid unnecessary calls with lots of caching
 // you may want to mess with the constants if youre getting bad results!
 
 // constants!
 const neverScan = ['home'];
 const updateInterval = 250;
 const minChance = 0.55; // min chance before proceeding to grow/hack
-const maxThreads = 8192; // max threads to allocate per server to hack
 const maxLogLength = 10;
 const prioritizeTimeBy = 0.04; // how much to prioritize time in ordering servers [0.0 : 1.0]
 const maxServerChars = 16;
@@ -37,7 +36,7 @@ let playerCache;
 let growthCache = {};
 
 // scheduling! :)
-// [hostname, changeBy, when]
+// [hostname, changeBy, when, scheduledAt]
 let securityLevelScheduled = [];
 let moneyAvailableScheduled = [];
 
@@ -309,10 +308,6 @@ function getGrowTime(ns, hostname) {
 	return getHackTime(ns, hostname) * 3.2;
 }
 
-function getAvgTime(ns, hostname) {
-	return (getHackTime(ns, hostname) + getWeakenTime(ns, hostname) + getGrowTime(ns, hostname)) / 3;
-}
-
 function formatTime(ms) {
 	let minutes = 0;
 	let secs = ms / 1000;
@@ -344,6 +339,10 @@ export async function loop(ns) {
 	growthCache = {};
 	playerCache = undefined;
 
+	// clean 1min old scheduled changes
+	securityLevelScheduled = securityLevelScheduled.filter(l => l[3] > (t - 60000));
+	moneyAvailableScheduled = moneyAvailableScheduled.filter(l => l[3] > (t - 60000));
+
 	const purchasedServers = ns.getPurchasedServers();
 
 	for (const s of purchasedServers) {
@@ -371,8 +370,8 @@ export async function loop(ns) {
 	let sorted = rooted
 		.filter(s => getMaxMoneyAvailable(ns, s) > 0) // avoid servers with no money at all
 		.sort((s2, s1) =>
-			getMaxMoneyAvailable(ns, s1) * (getAvgTime(ns, s1) * prioritizeTimeBy + (1 - prioritizeTimeBy)) -
-			getMaxMoneyAvailable(ns, s2) * (getAvgTime(ns, s2) * prioritizeTimeBy + (1 - prioritizeTimeBy))
+			getMaxMoneyAvailable(ns, s1) * hackPercent(ns, s1) * (getHackTime(ns, s1) * prioritizeTimeBy + (1 - prioritizeTimeBy)) -
+			getMaxMoneyAvailable(ns, s2) * hackPercent(ns, s2) * (getHackTime(ns, s2) * prioritizeTimeBy + (1 - prioritizeTimeBy))
 		);
 
 	let totalStartedScripts = 0;
@@ -425,7 +424,7 @@ export async function loop(ns) {
 
 			let scriptram = getScriptRam(ns, command);
 			let availram = getMaxRam(ns, fromServer) - ns.getServerUsedRam(fromServer);
-			let threads = Math.min(Math.floor(availram / scriptram), maxThreads);
+			let threads = Math.floor(availram / scriptram);
 			if (scriptram > availram) break;
 
 			if (command === 'weaken.script') {
@@ -451,31 +450,36 @@ export async function loop(ns) {
 						// we schedule this earlier by the hack time since the weaken will apply once the hack is complete
 						// Hash Tag Max Efficiency
 						// https://media.discordapp.net/attachments/415207508303544323/924114194817765466/Concept_of_Batches.png
-						(getWeakenTime(ns, targetServer) - getHackTime(ns, targetServer) + 100) / 1000
+						t + (getWeakenTime(ns, targetServer) - getHackTime(ns, targetServer) + 100),
+						t
 					]);
 					break;
 				case 'grow.script':
 					moneyAvailableScheduled.push([
 						targetServer,
 						(getMoneyAvailable(ns, targetServer) * growPercent(ns, targetServer, threads)) - getMoneyAvailable(ns, targetServer),
-						(getGrowTime(ns, targetServer) - getHackTime(ns, targetServer) + 100) / 1000
+						t + (getGrowTime(ns, targetServer) - getHackTime(ns, targetServer) + 100),
+						t
 					]);
 					securityLevelScheduled.push([
 						targetServer,
 						getGrowFortifyAmount(ns, targetServer, growPercent(ns, targetServer, threads), threads),
-						(getGrowTime(ns, targetServer) - getWeakenTime(ns, targetServer) + 100) / 1000
+						t + (getGrowTime(ns, targetServer) - getWeakenTime(ns, targetServer) + 100),
+						t
 					]);
 					break;
 				case 'hack.script':
 					securityLevelScheduled.push([
 						targetServer,
 						getHackFortifyAmount(ns, targetServer, hackPercent(ns, targetServer) * threads, threads),
-						(getHackTime(ns, targetServer) - getWeakenTime(ns, targetServer) + 100) / 1000
+						t + (getHackTime(ns, targetServer) - getWeakenTime(ns, targetServer) + 100),
+						t
 					]);
 					moneyAvailableScheduled.push([
 						targetServer,
 						(getMoneyAvailable(ns, targetServer) * hackPercent(ns, targetServer) * threads) - getMoneyAvailable(ns, targetServer),
-						(getGrowTime(ns, targetServer) - getHackTime(ns, targetServer) + 100) / 1000
+						t + (getGrowTime(ns, targetServer) - getHackTime(ns, targetServer) + 100),
+						t
 					]);
 					break;
 			}
@@ -486,7 +490,7 @@ export async function loop(ns) {
 			let pFromServer = fromServer.padEnd(rootedPadAmt, ' ').slice(0, rootedPadAmt);
 			let pCommand = command.padEnd(commandPadAmt, ' ');
 			let pTargetServer = targetServer.padEnd(sortedPadAmt, ' ').slice(0, sortedPadAmt);
-			let pThreads = threads.toString().padEnd(maxThreads.toString().length, ' ');
+			let pThreads = threads.toString().padEnd(5, ' ');
 			log.push(`${pFromServer}: ${pCommand} ${pTargetServer} t=${pThreads} | est time ${formatTime(time)}s`);
 			scriptsRan++;
 		}
