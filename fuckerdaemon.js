@@ -18,9 +18,7 @@ const grafana = true;
 import { urlPrefix, secret } from './grafanaconfig.js';
 */
 // and comment this:
-// /*
 const grafana = false;
-// */
 
 let logs = [];
 const maxLogLength = 10;
@@ -28,6 +26,7 @@ const maxLogLength = 10;
 let grafanaLogs = {};
 const grafanaInterval = 5; // 5s
 let grafanaStatus = ' NA';
+let grafanaPing = 0;
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -79,6 +78,7 @@ export async function main(ns) {
 			grafanaStatus = ' NOINFO';
 		} else if (grafana && grafanaTimer > grafanaInterval * 1000) {
 			grafanaStatus = '';
+			grafanaPing = Date.now();
 
 			grafanaTimer -= grafanaInterval * 1000;
 			let totalLogs = Object.keys(grafanaLogs).length;
@@ -100,7 +100,10 @@ export async function main(ns) {
 				}
 
 				success++;
+				delete grafanaLogs[endpoint];
 			}
+
+			grafanaPing = Date.now() - grafanaPing;
 
 			ns.rm('_.txt');
 
@@ -111,7 +114,7 @@ export async function main(ns) {
 
 		let footer = 'fuckerdaemon | (ↄ) Jill "oatmealine" Monoids 2021';
 		if (grafana) {
-			footer = `fuckerdamon | grafana:${grafanaStatus} | (ↄ) Jill "oatmealine" Monoids 2021`;
+			footer = `fuckerdamon | grafana:${grafanaStatus + ' ' + Math.floor(grafanaPing) + 'ms'} | (ↄ) Jill "oatmealine" Monoids 2021`;
 		}
 
 		ns.clearLog();
@@ -126,5 +129,6 @@ ${footer}`);
 		await ns.sleep(Math.max(sleepTime - tickDuration, 0) + 100); // to prevent weird timing jank
 		t += sleepTime;
 		grafanaTimer += sleepTime;
+		grafanaTimer = Math.max(grafanaTimer, 0);
 	}
 }
