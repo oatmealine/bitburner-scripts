@@ -6,6 +6,7 @@
 
 // constants!
 const neverScan = ['home'];
+const backdoorServers = ['fulcrumassets', 'CSEC', 'avmnite-02h', 'I.I.I.I', 'run4theh111z']
 const updateInterval = 250;
 const minChance = 0.55; // min chance before proceeding to grow/hack
 const maxLogLength = 10;
@@ -122,6 +123,7 @@ function nukeAllNukable(ns, exes) {
 
 			ns.nuke(s);
 			ns.tprint(`${s}: nuked`);
+			if (backdoorServers.includes(s)) ns.tprint(`${s}: you may want to connect to this server and run backdoor! special things happen`);
 		}
 	}
 }
