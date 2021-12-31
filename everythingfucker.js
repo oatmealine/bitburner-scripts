@@ -271,7 +271,13 @@ function getSecurityLevel(ns, hostname) {
 		oldLevel[hostname] = level;
 		securityLevelScheduled = securityLevelScheduled.filter(l => l[0] !== hostname);
 	}
-	return level + Math.max(securityLevelScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0, getMinSecurityLevel(ns, hostname));
+	return level + Math.max(
+		securityLevelScheduled
+			.filter(l => hostname === l[0])
+			.map(l => l[1] * Math.max(Math.min((t - l[3]) / (l[2] - l[3]), 1), 0))
+			.reduce((p, n) => p + n, 0) || 0,
+		getMinSecurityLevel(ns, hostname)
+	);
 }
 function getRequiredHackingLevel(ns, hostname) {
 	return requiredHackingLevel[hostname] || (requiredHackingLevel[hostname] = ns.getServerRequiredHackingLevel(hostname));
@@ -284,7 +290,16 @@ function getMoneyAvailable(ns, hostname) {
 		oldMoney[hostname] = money;
 		moneyAvailableScheduled = moneyAvailableScheduled.filter(l => l[0] !== hostname);
 	}
-	return money + Math.min(Math.max(moneyAvailableScheduled.filter(l => t >= l[2] && hostname === l[0]).reduce((p, n) => p + n[1], 0) || 0, 0), getMaxMoneyAvailable(ns, hostname));
+	return money + Math.min(
+		Math.max(
+			moneyAvailableScheduled
+				.filter(l => hostname === l[0])
+				.map(l => l[1] * Math.max(Math.min((t - l[3]) / (l[2] - l[3]), 1), 0))
+				.reduce((p, n) => p + n, 0) || 0,
+			0
+		),
+		getMaxMoneyAvailable(ns, hostname)
+	);
 }
 function getMaxMoneyAvailable(ns, hostname) {
 	return moneyMaxCache[hostname] || (moneyMaxCache[hostname] = ns.getServerMaxMoney(hostname));
@@ -339,9 +354,9 @@ export async function loop(ns) {
 	growthCache = {};
 	playerCache = undefined;
 
-	// clean 1min old scheduled changes
-	securityLevelScheduled = securityLevelScheduled.filter(l => l[3] > (t - 60000));
-	moneyAvailableScheduled = moneyAvailableScheduled.filter(l => l[3] > (t - 60000));
+	// clean 10min old scheduled changes
+	securityLevelScheduled = securityLevelScheduled.filter(l => l[3] > (t - 600000));
+	moneyAvailableScheduled = moneyAvailableScheduled.filter(l => l[3] > (t - 600000));
 
 	const purchasedServers = ns.getPurchasedServers();
 
@@ -382,9 +397,9 @@ export async function loop(ns) {
 	let ranHack = 0;
 	let threadCounts = [];
 
-	let rootedPadAmt = rooted.reduce((s1, s2) => { return Math.max(s1 || 0, s2.length || 0) });
+	let rootedPadAmt = rooted.reduce((s1, s2) => { return Math.max(s1 || 0, s2.length || 0) }, 0);
 	let commandPadAmt = 6; // weaken is 6 chars long
-	let sortedPadAmt = sorted.reduce((s1, s2) => { return Math.max(s1 || 0, s2.length || 0) });
+	let sortedPadAmt = sorted.reduce((s1, s2) => { return Math.max(s1 || 0, s2.length || 0) }, 0);
 
 	rootedPadAmt = Math.min(rootedPadAmt, maxServerChars);
 	sortedPadAmt = Math.min(sortedPadAmt, maxServerChars);
@@ -399,13 +414,19 @@ export async function loop(ns) {
 
 		let servIndex = 0;
 		let scriptsRan = 0;
+		let loopedAround = false;
 		while (true) {
-			const targetServer = sorted[servIndex];
+			let targetServer = sorted[servIndex];
 			servIndex++;
+			if (servIndex > sorted.length && !loopedAround) {
+				loopedAround = true;
+				servIndex = 0;
+				targetServer = sorted[servIndex];
+			}
 			if (!targetServer) break;
 
 			const hackChance = getHackChance(ns, targetServer);
-			const minMoneyAmt = hackPercent(ns, targetServer) * avgThreadAmount * getMaxMoneyAvailable(ns, targetServer);
+			const minMoneyAmt = Math.min(hackPercent(ns, targetServer), 1) * getMaxMoneyAvailable(ns, targetServer);
 
 			let command;
 			let time;
@@ -427,14 +448,25 @@ export async function loop(ns) {
 			let threads = Math.floor(availram / scriptram);
 			if (scriptram > availram) break;
 
+			// optimize the amount of script calls
+			// to avoid redundant calls
 			if (command === 'weaken.script') {
-				// optimize the amount of threads when weakening
-				// to avoid redundant weakens
-				while (getMinSecurityLevel(ns, targetServer) > getSecurityLevel(ns, targetServer) - getWeakenAmount(threads)) {
+				while (threads > 0 && getMinSecurityLevel(ns, targetServer) > getSecurityLevel(ns, targetServer) - getWeakenAmount(threads)) {
 					threads--;
 				}
-				if (threads === 0) threads = 1; // this would create a redundant weaken, but theres not much better handling for this possible in this codebase
 			}
+			if (command === 'hack.script') {
+				while (threads > 0 && hackPercent(ns, targetServer) * threads > (getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer))) {
+					threads--;
+				}
+			}
+			if (command === 'grow.script') {
+				while (threads > 0 && growPercent(ns, targetServer, threads) > 1 - (getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer))) {
+					threads--;
+				}
+			}
+			if (threads <= 0 && !loopedAround) continue;
+			if (threads === 0) threads++;
 
 			// time /= threads; // that's not even true
 
@@ -514,7 +546,7 @@ export async function loop(ns) {
 		totalStartedScripts += scriptsRan;
 	}
 
-	let avgThreadCount = threadCounts.reduce((p, c) => p + c) / threadCounts.length;
+	let avgThreadCount = threadCounts.reduce((p, c) => p + c, 0) / threadCounts.length;
 	avgThreadAmount = avgThreadCount; // for use in next tick
 	processesPerTick = Math.max(mix(processesPerTick, 0, smallestTimeToWait / 1000 * 0.25), totalStartedScripts);
 
