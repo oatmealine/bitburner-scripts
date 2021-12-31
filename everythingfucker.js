@@ -443,27 +443,7 @@ export async function loop(ns) {
 				time = getHackTime(ns, targetServer);
 			}
 
-			if (ns.isRunning(command, fromServer, targetServer) && command === 'grow.script') {
-				if (loopedAround) {
-					command = 'hack.script';
-				} else {
-					continue;
-				}
-			}
-			if (ns.isRunning(command, fromServer, targetServer) && command === 'hack.script') {
-				if (loopedAround) {
-					command = 'weaken.script';
-				} else {
-					continue;
-				}
-			}
-			if (ns.isRunning(command, fromServer, targetServer) && command === 'weaken.script') {
-				if (loopedAround) {
-					command = 'hack.script';
-				} else {
-					continue;
-				}
-			}
+			if (ns.isRunning(command, fromServer, targetServer)) continue;
 
 			let scriptram = getScriptRam(ns, command);
 			let availram = getMaxRam(ns, fromServer) - ns.getServerUsedRam(fromServer);
