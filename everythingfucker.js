@@ -208,6 +208,28 @@ function growPercent(ns, hostname, threads, cores = 1) {
 	return Math.pow(adjGrowthRate, numServerGrowthCyclesAdjusted * p.hacking_grow_mult * coreBonus);
 }
 
+// for optimization purposes
+function growPercentPart1(ns, hostname) {
+	const p = getPlayer(ns);
+
+	//Get adjusted growth rate, which accounts for server security
+	const growthRate = /*CONSTANTS.ServerBaseGrowthRate*/ 1.03;
+	let adjGrowthRate = 1 + (growthRate - 1) / getSecurityLevel(ns, hostname);
+	if (adjGrowthRate > /*CONSTANTS.ServerMaxGrowthRate*/ 1.0035) {
+		adjGrowthRate = /*CONSTANTS.ServerMaxGrowthRate*/ 1.0035;
+	}
+
+	//Calculate adjusted server growth rate based on parameters
+	const serverGrowthPercentage = getGrowth(ns, hostname) / 100;
+
+	return [adjGrowthRate, serverGrowthPercentage * p.hacking_grow_mult]
+}
+function growPercentPart2(growthRate, mult, threads, cores = 1) {
+	const numServerGrowthCycles = Math.max(Math.floor(threads), 0);
+	const coreBonus = 1 + (cores - 1) / 16;
+	return Math.pow(growthRate, mult * numServerGrowthCycles * coreBonus)
+}
+
 // stolen from the bitburner source code
 
 // so funny story right
@@ -407,6 +429,8 @@ export async function loop(ns) {
 	sortedPadAmt = Math.min(sortedPadAmt, maxServerChars);
 
 	for (const fromServer of rooted) {
+		await ns.sleep(1);
+
 		if (!ns.fileExists('grow.script', fromServer))
 			await ns.scp('grow.script', 'home', fromServer);
 		if (!ns.fileExists('hack.script', fromServer))
@@ -453,17 +477,23 @@ export async function loop(ns) {
 			// optimize the amount of script calls
 			// to avoid redundant calls
 			if (command === 'weaken.script') {
-				while (threads > 0 && getMinSecurityLevel(ns, targetServer) > getSecurityLevel(ns, targetServer) - getWeakenAmount(threads)) {
+				let min = getMinSecurityLevel(ns, targetServer);
+				let lvl = getSecurityLevel(ns, targetServer);
+				while (threads > 0 && min > (lvl - getWeakenAmount(threads))) {
 					threads--;
 				}
 			}
 			if (command === 'hack.script') {
-				while (threads > 0 && hackPercent(ns, targetServer) * threads > (getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer))) {
+				const hp = hackPercent(ns, targetServer)
+				const thres = getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer)
+				while (threads > 0 && hp * threads > thres) {
 					threads--;
 				}
 			}
 			if (command === 'grow.script') {
-				while (threads > 0 && growPercent(ns, targetServer, threads) > 1 - (getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer))) {
+				const [gp1, gp1m] = growPercentPart1(ns, targetServer);
+				const thres = 1 - (getMoneyAvailable(ns, targetServer) / getMaxMoneyAvailable(ns, targetServer));
+				while (threads > 0 && growPercentPart2(gp1, gp1m, threads) > thres) {
 					threads--;
 				}
 			}
